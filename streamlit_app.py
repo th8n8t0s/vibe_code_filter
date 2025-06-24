@@ -67,6 +67,12 @@ if 'candidates' not in st.session_state:
 
 keywords = st.text_input("🔑 Enter vibe keywords (comma-separated):", "creative coding, p5.js, generative art")
 
+if len(st.session_state.candidates) >= 50:
+    st.warning("⚠️ You're approaching the session limit (~50 candidates). For large volumes, consider running multiple instances or breaking into batches.")
+if len(st.session_state.candidates) >= 100:
+    st.error("❌ Too many candidates in this session. Please export and start a new session.")
+    st.stop()
+
 with st.form("add_candidate"):
     st.write("### Add a Candidate")
     name = st.text_input("Name")
@@ -94,7 +100,6 @@ if st.session_state.candidates:
             st.markdown(f"- Notion: {r['notion']}")
             st.markdown("---")
 
-        # Optional CSV download
         json_results = json.dumps(results)
         st.download_button("Download Results (JSON)", json_results, file_name="ranked_candidates.json")
 else:
