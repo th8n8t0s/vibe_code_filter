@@ -33,7 +33,7 @@ def compute_score(candidate_text, keywords):
     return cosine_similarity(tfidf[0:1], tfidf[1:2])[0][0]
 
 # ----------------------------
-# App
+# App Setup
 # ----------------------------
 
 st.set_page_config(page_title="Vibe Code Filter", layout="wide")
@@ -42,7 +42,14 @@ st.title("Vibe Code Filter")
 tab1, tab2 = st.tabs(["Submit & Score", "Dashboard View"])
 
 # ----------------------------
-# TAB 1: Manual Submission + Scoring
+# Session Storage
+# ----------------------------
+
+if "candidates" not in st.session_state:
+    st.session_state["candidates"] = []
+
+# ----------------------------
+# TAB 1: Manual Submission + Re-ranking
 # ----------------------------
 
 with tab1:
@@ -52,31 +59,41 @@ with tab1:
         name = st.text_input("Candidate Name")
         github_url = st.text_input("GitHub URL")
         notion_url = st.text_input("Notion URL")
-        keywords = st.text_area("Vibe Keywords (comma or space-separated)")
         submitted = st.form_submit_button("Add Candidate")
-
-    if "candidates" not in st.session_state:
-        st.session_state["candidates"] = []
 
     if submitted:
         github_text = fetch_github_readme(github_url)
         notion_text = fetch_notion_text(notion_url)
         combined_text = github_text + " " + notion_text
-        score = compute_score(combined_text, keywords)
         st.session_state["candidates"].append({
             "Name": name,
             "GitHub": github_url,
             "Notion": notion_url,
-            "Score": round(score, 4)
+            "Text": combined_text
         })
 
+    st.markdown("### Keyword Filter")
+    vibe_keywords = st.text_input("Enter keywords for scoring", value="automation ai fast")
+
+    for candidate in st.session_state["candidates"]:
+        candidate["Score"] = round(compute_score(candidate["Text"], vibe_keywords), 4)
+
     if st.session_state["candidates"]:
-        df = pd.DataFrame(st.session_state["candidates"])
+        df = pd.DataFrame(st.session_state["candidates"]).drop(columns=["Text"])
         df = df.sort_values(by="Score", ascending=False)
-        st.subheader("Ranked Candidates")
+
+        st.markdown("### Ranked Candidates")
         st.dataframe(df, use_container_width=True)
+
         st.download_button("Download CSV", df.to_csv(index=False), file_name="ranked_candidates.csv")
         st.download_button("Download JSON", df.to_json(orient="records"), file_name="ranked_candidates.json")
+
+        st.markdown("### Remove Candidate")
+        names = [c["Name"] for c in st.session_state["candidates"]]
+        name_to_delete = st.selectbox("Select a candidate to remove", [""] + names)
+        if name_to_delete:
+            st.session_state["candidates"] = [c for c in st.session_state["candidates"] if c["Name"] != name_to_delete]
+            st.success(f"Deleted {name_to_delete}. Refresh view to update table.")
 
 # ----------------------------
 # TAB 2: Dashboard Viewer
@@ -84,12 +101,12 @@ with tab1:
 
 with tab2:
     st.subheader("Upload Ranked Candidates (CSV)")
-
     uploaded_file = st.file_uploader("Upload CSV", type="csv")
 
     if uploaded_file:
         df = pd.read_csv(uploaded_file)
         if "Score" in df.columns:
             df = df.sort_values(by="Score", ascending=False)
+
         st.dataframe(df, use_container_width=True)
         st.download_button("Download CSV", df.to_csv(index=False), file_name="dashboard_ranking.csv")
