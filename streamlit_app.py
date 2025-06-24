@@ -62,26 +62,40 @@ def evaluate_candidates(candidates, keywords):
 st.title("🔍 Vibe Code Filter Tool")
 st.write("Evaluate candidates based on GitHub + Notion content relevance to your vibe.")
 
-keywords = st.text_input("🔑 Enter vibe keywords (comma-separated):", "creative coding, p5.js, generative art")
-candidates_data = []
+if 'candidates' not in st.session_state:
+    st.session_state.candidates = []
 
-with st.form("candidate_form"):
+keywords = st.text_input("🔑 Enter vibe keywords (comma-separated):", "creative coding, p5.js, generative art")
+
+with st.form("add_candidate"):
     st.write("### Add a Candidate")
     name = st.text_input("Name")
     github = st.text_input("GitHub Repo URL")
     notion = st.text_input("Notion Page URL")
     submitted = st.form_submit_button("Add Candidate")
     if submitted:
-        candidates_data.append({'name': name, 'github': github, 'notion': notion})
+        st.session_state.candidates.append({'name': name, 'github': github, 'notion': notion})
+        st.success(f"Added {name}")
 
-if st.button("Run Filter"):
-    if candidates_data:
-        results = evaluate_candidates(candidates_data, keywords)
-        st.write("### Results:")
+if st.session_state.candidates:
+    st.write("### Current Candidates:")
+    for idx, c in enumerate(st.session_state.candidates):
+        st.markdown(f"**{idx+1}. {c['name']}**  ")
+        st.markdown(f"GitHub: {c['github']}  ")
+        st.markdown(f"Notion: {c['notion']}")
+        st.markdown("---")
+
+    if st.button("Run Filter"):
+        results = evaluate_candidates(st.session_state.candidates, keywords)
+        st.write("### Ranked Results:")
         for r in results:
             st.markdown(f"**{r['name']}** — Score: `{r['score']}`")
             st.markdown(f"- GitHub: {r['github']}")
             st.markdown(f"- Notion: {r['notion']}")
             st.markdown("---")
-    else:
-        st.warning("Add at least one candidate to evaluate.")
+
+        # Optional CSV download
+        json_results = json.dumps(results)
+        st.download_button("Download Results (JSON)", json_results, file_name="ranked_candidates.json")
+else:
+    st.info("No candidates added yet. Use the form above to begin.")
