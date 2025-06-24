@@ -68,6 +68,7 @@ This is the manual-friendly MVP. Here's what can come next:
 - scikit-learn (TF-IDF & cosine similarity)
 
 ---
+## this is the live link for the demo - ### 🔗 Live Demo: [https://vibecodefilter.streamlit.app](https://vibecodefilter.streamlit.app)
 
 ##  Author
 
