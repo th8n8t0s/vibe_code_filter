@@ -2,6 +2,7 @@
 import requests
 import re
 import json
+import pandas as pd
 from bs4 import BeautifulSoup
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -67,6 +68,17 @@ if 'candidates' not in st.session_state:
 
 keywords = st.text_input("🔑 Enter vibe keywords (comma-separated):", "creative coding, p5.js, generative art")
 
+uploaded_file = st.file_uploader("📥 Upload Candidate CSV (Name, GitHub URL, Notion URL)", type="csv")
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+    for _, row in df.iterrows():
+        st.session_state.candidates.append({
+            'name': row.get('Candidate Name', 'Unknown'),
+            'github': row.get('GitHub URL', ''),
+            'notion': row.get('Notion URL', '')
+        })
+    st.success(f"✅ Imported {len(df)} candidates from CSV")
+
 if len(st.session_state.candidates) >= 50:
     st.warning("⚠️ You're approaching the session limit (~50 candidates). For large volumes, consider running multiple instances or breaking into batches.")
 if len(st.session_state.candidates) >= 100:
@@ -100,7 +112,10 @@ if st.session_state.candidates:
             st.markdown(f"- Notion: {r['notion']}")
             st.markdown("---")
 
+        df_out = pd.DataFrame(results)
+        csv_data = df_out.to_csv(index=False).encode('utf-8')
+        st.download_button("Download Results (CSV)", csv_data, file_name="ranked_candidates.csv", mime='text/csv')
         json_results = json.dumps(results)
         st.download_button("Download Results (JSON)", json_results, file_name="ranked_candidates.json")
 else:
-    st.info("No candidates added yet. Use the form above to begin.")
+    st.info("No candidates added yet. Use the form above or upload a CSV to begin.")
